@@ -1,0 +1,31 @@
+# Datasets
+data/
+*.zip
+
+# Model weights
+*.pt
+*.pth
+*.onnx
+
+# Training artifacts (large)
+results-gpu/weights/
+results/weights/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local runs
+runs/
