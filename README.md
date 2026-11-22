@@ -1,6 +1,6 @@
 # AI for Agriculture · Stage 3
 
-> YOLOv8 作物病害检测 + Sentinel-2 遥感 GIS 管线
+> YOLOv8 作物病害检测 + Sentinel-2 遥感 GIS 管线 + 多指数 + 时序变化
 
 ---
 
@@ -29,7 +29,7 @@ python -c "from ultralytics import YOLO; YOLO('yolov8n.pt').train(data='data/pla
 
 ---
 
-## 🛰️ 阶段 3B：遥感 + GIS 管线 🚧
+## 🛰️ 阶段 3B：遥感 + GIS 管线 ✅
 
 **仓库子目录**：`remote-sensing-gis/` + `stage3b-report/`
 
@@ -61,16 +61,6 @@ python -c "from ultralytics import YOLO; YOLO('yolov8n.pt').train(data='data/pla
 | CRS 构造 | **`CRS.from_proj4()`** | 绕过 pyproj 3.7.x from_epsg bug |
 | 远程读取 | **`/vsicurl/` + `from_bounds()`** | 不下载整景 1.2GB |
 
-### 快速开始
-
-```bash
-pip install geopandas rasterio pyproj shapely pystac-client planetary-computer rasterstats matplotlib pandas -i https://pypi.tuna.tsinghua.edu.cn/simple
-
-cd remote-sensing-gis
-python scripts/download_real_ndvi.py   # ✅ 周口 NDVI 已验证
-python scripts/henan_county_ndvi.py    # 🚧 全省管线
-```
-
 ### 验证结果（周口，2024-05-06 冬小麦季）
 
 | 指标 | 值 |
@@ -86,6 +76,75 @@ python scripts/henan_county_ndvi.py    # 🚧 全省管线
 
 ---
 
+## 📈 阶段 3C：多指数 + Folium + 时序变化 ✅
+
+**仓库子目录**：`remote-sensing-gis/scripts/` + `remote-sensing-gis/outputs/`
+
+### 多指数扩展（周口，2024-05-06）
+
+| 指数 | 公式 | 均值 | 范围 | 语义 |
+|---|---|---|---|---|
+| **NDVI** | (NIR-R)/(NIR+R) | 0.311 | [-0.014, 0.598] | 植被活力 |
+| **EVI** | 2.5*(NIR-R)/(NIR+6R-7.5B+1) | 0.398 | [-0.020, 1.000] | 增强型（抗土壤） |
+| **SAVI** | (NIR-R)/(NIR+R+0.5)×1.5 | 0.260 | [-0.010, 0.536] | 土壤调节（裸土区） |
+| **NDWI** | (G-NIR)/(G+NIR) | -0.310 | [-0.548, 0.090] | 水体检测 |
+
+### 时序变化（周口，春 vs 秋）
+
+| 时间点 | 均值 NDVI | 对应物候 | 说明 |
+|---|---|---|---|
+| **2024-04-18 春季** | **0.419** | 冬小麦灌浆期 | 植被最茂盛 |
+| **2024-10-08 秋季** | **0.105** | 秋收后休耕地 | 裸土为主 |
+| **差值 (春-秋)** | **+0.314** | 显著正值 | 清晰揭示小麦季 ✅ |
+
+### Folium 交互式地图
+
+`zhoukou_interactive_map.html` — 4 指数图层可切换，县域悬停显示统计值，全屏浏览。
+
+### 脚本清单
+
+```
+scripts/
+├── download_real_ndvi.py       # 3B 基线验证 (✅)
+├── zhoukou_multi_indices.py    # 3C 多指数管线 (✅)
+├── make_interactive_map.py     # 3C Folium HTML (✅)
+├── zhoukou_timeseries.py       # 3C 春 vs 秋时序 (✅)
+├── henan5_multi_indices.py     # 河南中南部 5 市 (🚧 骨架，大窗口慢)
+├── henan_full_indices.py       # 全省管线 (🚧 OOM)
+└── ...
+```
+
+### 产出目录
+
+```
+outputs/
+├── sentinel2_real/             # 3B 基线 NDVI
+├── zhoukou_multi/              # ✅ 4 指数 tif + shp + Folium HTML
+├── zhoukou_timeseries/         # ✅ 春/秋 NDVI + 差值 tif + 三联图 + 直方图
+├── henan5_multi/               # 🚧 河南中南部 5 市
+└── henan_full/                 # 🚧 全省
+```
+
+### 快速开始
+
+```bash
+pip install geopandas rasterio pyproj shapely pystac-client planetary-computer rasterstats folium matplotlib -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+cd remote-sensing-gis
+python scripts/zhoukou_multi_indices.py   # ✅ 多指数管线
+python scripts/zhoukou_timeseries.py       # ✅ 春 vs 秋时序
+python scripts/make_interactive_map.py     # ✅ Folium 交互式地图
+```
+
+### 网络注意事项
+
+Planetary Computer（微软 Blob Storage）国内直连不稳定：
+- **bbox < 0.2°×0.15°（~2km）**：远程裁剪 ~15-30s/波段，稳定可用 ✅
+- **bbox > 1° 或完整 tile（10980×10980）**：超时或 10+ min ❌
+- **解决**：严格限制 bbox 在单个 UTM zone 内（±3° 中央经线）
+
+---
+
 ## 📂 完整目录结构
 
 ```
@@ -93,17 +152,24 @@ ai4agri-stage3/
 ├── README.md                        ← 你正在看
 │
 ├── crop-detect-yolov8/              # ✅ 阶段 3A YOLOv8
-│   ├── README.md                    # YOLOv8 详细文档
-│   ├── DELIVERY_SUMMARY.md          # 交付总结
+│   ├── README.md
 │   ├── best.pt                      # 模型权重
 │   ├── results-gpu/                 # 训练产出
 │   └── data/plantdoc/               # PlantDoc 数据集
 │
-├── remote-sensing-gis/              # 🚧 阶段 3B 遥感 GIS
-│   └── scripts/
-│       ├── download_real_ndvi.py    # ✅ 已验证
-│       ├── henan_county_ndvi.py      # 🚧 进行中
-│       └── stage3b_full_pipeline.py  # 管线骨架
+├── remote-sensing-gis/              # ✅ 阶段 3B+3C 遥感 GIS
+│   ├── scripts/                     # 12 个 .py 脚本
+│   │   ├── download_real_ndvi.py        # ✅ 基线 NDVI
+│   │   ├── zhoukou_multi_indices.py     # ✅ 多指数
+│   │   ├── zhoukou_timeseries.py        # ✅ 时序变化
+│   │   ├── make_interactive_map.py      # ✅ Folium 地图
+│   │   └── ...
+│   └── outputs/
+│       ├── sentinel2_real/              # 3B 基线产出
+│       ├── zhoukou_multi/               # ✅ 4 指数 tif+shp+HTML
+│       ├── zhoukou_timeseries/          # ✅ 春/秋/差值 tif + PNG
+│       ├── henan5_multi/                # 🚧 骨架
+│       └── henan_full/                  # 🚧 骨架
 │
 └── stage3b-report/                  # 📄 阶段 3B HTML 报告
     └── stage3b-report.html
@@ -116,8 +182,9 @@ ai4agri-stage3/
 ```
 ✅ 阶段 1  Python + ML 回归 (Kaggle Crop Yield)
 ✅ 阶段 2  PyTorch + CNN 分类 (PlantVillage 91.58%)
-✅ 阶段 3A YOLOv8 目标检测 (本项目 mAP50 62.05%)
-🚧 阶段 3B 遥感 + GIS (Sentinel-2 NDVI 专题图)
+✅ 阶段 3A YOLOv8 目标检测 (mAP50 62.05%)
+✅ 阶段 3B 遥感 + GIS 管线 (Sentinel-2 NDVI)
+✅ 阶段 3C 多指数 + Folium + 时序变化
 ⬜ 阶段 4  简历 + 项目作品集
 ```
 
