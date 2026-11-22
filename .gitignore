@@ -1,3 +1,4 @@
+# ===== 阶段 3B 遥感 GIS 输出 =====
 remote-sensing-gis/outputs/**/*.tif
 remote-sensing-gis/outputs/**/*.shp
 remote-sensing-gis/outputs/**/*.dbf
@@ -6,8 +7,30 @@ remote-sensing-gis/outputs/**/*.prj
 remote-sensing-gis/outputs/**/*.cpg
 remote-sensing-gis/data/**/*.shp
 remote-sensing-gis/data/**/*.dbf
+
+# ===== 阶段 3A YOLOv8 =====
+data/
+*.zip
+*.pt
+*.pth
+*.onnx
+results-gpu/weights/
+results/weights/
+runs/
+
+# ===== Python =====
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
 .env
+
+# ===== IDE =====
+.idea/
+.vscode/
+*.swp
+
+# ===== OS =====
 .DS_Store
+Thumbs.db
 .ipynb_checkpoints/
