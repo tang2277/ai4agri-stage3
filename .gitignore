@@ -1,0 +1,13 @@
+remote-sensing-gis/outputs/**/*.tif
+remote-sensing-gis/outputs/**/*.shp
+remote-sensing-gis/outputs/**/*.dbf
+remote-sensing-gis/outputs/**/*.shx
+remote-sensing-gis/outputs/**/*.prj
+remote-sensing-gis/outputs/**/*.cpg
+remote-sensing-gis/data/**/*.shp
+remote-sensing-gis/data/**/*.dbf
+__pycache__/
+*.pyc
+.env
+.DS_Store
+.ipynb_checkpoints/
